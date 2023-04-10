@@ -1,0 +1,5 @@
+__pycache__
+.env
+models
+models_01
+crack_segmentation_dataset
