@@ -2,4 +2,6 @@ __pycache__
 .env
 models
 models_01
+models_POS11
 crack_segmentation_dataset
+crack_segmentation_dataset.zip

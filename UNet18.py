@@ -1,6 +1,8 @@
 # Unet with resnet18 backbone
 import torch.nn.functional as F
 from torch import nn, optim
+from torchvision import models
+from collections import OrderedDict
 
 #    '''resnet model that outputs intermediate features'''
 class myresnet(nn.Module):
@@ -13,7 +15,7 @@ class myresnet(nn.Module):
             ('fc2', nn.Linear(hidden_layers, 2)),
             ('output', nn.LogSoftmax(dim=1))
         ]))
-        self.lrs = (self.backbone.conv1, self.backbone.bn1, self.backbone.maxpool, self.backbone.layer1, self.backbone.layer2) # 학습하지 않을 레이어들, 실제 구현에서는 모든 레이어들이 학습된다.
+        self.lrs = (self.backbone.conv1, self.backbone.bn1, self.backbone.maxpool, self.backbone.layer1, self.backbone.layer2)
 
     def forward(self, x):
         x = self.backbone.conv1(x)
@@ -24,7 +26,7 @@ class myresnet(nn.Module):
         l2 = self.backbone.layer2(l1)
         l3 = self.backbone.layer3(l2)
         l4 = self.backbone.layer4(l3)
-        out = self.backbone.avgpool(l4)   #원본 이미지가 448x448 이상이면 문제 발생 가능
+        out = self.backbone.avgpool(l4)
         out = out.view(out.size(0), -1)
         out = self.classifier(out)
         return {'layer0': l0, 'layer1': l1, 'layer2': l2,
@@ -32,11 +34,11 @@ class myresnet(nn.Module):
 
 
 class UNet18(nn.Module):
-    def __init__(self, resnet = None, pretrained = True):
+    def __init__(self, hidden_layers = 1024, pretrained = True):
         super(UNet18, self).__init__()
-        if resnet is None:
-            resnet = models.resnet18(pretrained = pretrained)
-            resnet = myresnet(resnet, hidden_layers = 1024)
+        resnet = models.resnet18(pretrained = pretrained)
+        resnet = myresnet(resnet, hidden_layers = hidden_layers)
+
         self.resnet = resnet
         self.ct2d = nn.ConvTranspose2d(512, 256, kernel_size=2, stride=2)
         self.c2d = nn.Conv2d(512, 256, kernel_size=3, padding=1, stride=1)
@@ -88,30 +90,3 @@ class UNet18(nn.Module):
         up = torch.squeeze(up)   # 채널 수를 없애준다. 배치 크기가 1이라면 오류가 발생하므로 주의
         up = nn.LogSigmoid()(up)
         return up
-
-# class Unet50(nn.Module):
-#     def __init__(self, resnet = None, pretrained = True):
-#         super(Unet50, self).__init__()
-#         if resnet is None:
-#             resnet = models.resnet50(pretrained = pretrained)
-#             resnet = myresnet(resnet, hidden_layers = 1024)
-#         self.resnet = resnet
-#         self.ct2d = nn.ConvTranspose2d(2048, 1024, kernel_size=2, stride=2)
-#         self.c2d = nn.Conv2d(2048, 1024, kernel_size=3, padding=1, stride=1)
-#         self.bn1 = nn.BatchNorm2d(1024)
-#         self.relu = nn.ReLU()
-#         self.ct2d2 = nn.ConvTranspose2d(1024, 512, kernel_size=2, stride=2)
-#         self.c2d2 = nn.Conv2d(1024, 512, kernel_size=3, padding=1, stride=1)
-#         self.bn2 = nn.BatchNorm2d(512)
-#         self.ct2d3 = nn.ConvTranspose2d(512, 256, kernel_size=2, stride=2)
-#         self.c2d3 = nn.Conv2d(512, 256, kernel_size=3, padding=1, stride=1)
-#         self.bn3 = nn.BatchNorm2d(256)
-#         self.ct2d4 = nn.ConvTranspose2d(256, 128, kernel_size=2, stride=2)
-#         self.c2d4 = nn.Conv2d(256, 128, kernel_size=3, padding=1, stride=1)
-#         self.bn4 = nn.BatchNorm2d(128)
-#         self.ct2d5 = nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2)
-#         self.c2d5 = nn.Conv2d(64, 32, kernel_size=3, padding=1, stride=1)
-#         self.bn5 = nn.BatchNorm2d(32)
-#         self.ct2d6 = nn.ConvTranspose2d(32, 16, kernel_size=2, stride=2)
-#         self.c2d6 = nn.Conv2d(16, 1, kernel_size=1, stride=1)
-#         self.lrs = self.resnet.lrs

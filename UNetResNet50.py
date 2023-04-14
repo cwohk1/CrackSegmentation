@@ -66,8 +66,11 @@ class UNetResNet50(nn.Module):
         self.upconv2 = Up(512, 256)
         self.upconv1 = Up(256, 128, True)
 
-        self.outconv = nn.Conv2d(128, n_classes, kernel_size=1)
-
+        self.outconv = nn.Sequential(
+            nn.Conv2d(128, n_classes, kernel_size=1),
+            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
+        )
+        
     def forward(self, x):
         x0 = self.inconv(x)
         x1 = self.downconv1(x0)
